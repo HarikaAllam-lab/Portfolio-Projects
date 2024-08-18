@@ -226,3 +226,53 @@ select
   birth_date, 
   case when gender='M' then 'Male' when gender='F' then 'Female' end as Gender
 from patients
+
+--Show patient_id, first_name, last_name from patients whose does not have any records in the admissions table. (Their patient_id does not exist in any admissions.patient_id rows.)
+
+select patients.patient_id,first_name, last_name from patients where patients.patient_id not in (select admissions.patient_id from admissions)
+
+--Show all of the patients grouped into weight groups.Show the total amount of patients in each weight group.Order the list by the weight group decending.
+
+select count(*) AS patients_in_group, floor(weight / 10) * 10 as weight_group from patients
+group by weight_group
+order by weight_group desc
+
+--Show patient_id, weight, height, isObese from the patients table.
+
+select patient_id, weight, height, 
+  (case  when weight/(power(height/100.0,2)) >= 30 then 1 else 0 end) as isObese 
+from patients
+
+--Show patient_id, first_name, last_name, and attending doctor's specialty. Show only the patients who has a diagnosis as 'Epilepsy' and the doctor's first name is 'Lisa'
+
+select p.patient_id, p.first_name as patient_first_name, p.last_name as patient_last_name,ph.specialty as attending_doctor_specialty from patients p
+  join admissions a on a.patient_id = p.patient_id
+  join doctors ph on ph.doctor_id = a.attending_doctor_id
+where ph.first_name = 'Lisa' and a.diagnosis = 'Epilepsy'
+
+--All patients who have gone through admissions, can see their medical documents on our site. Those patients are given a temporary password after their first admission. Show the patient_id and temp_password.
+--The password must be the following, in order:
+--1. patient_id
+--2. the numerical length of patient's last_name
+--3. year of patient's birth_date
+
+select distinct P.patient_id, concat(P.patient_id,len(last_name),year(birth_date)) as temp_password from patients P
+  join admissions A on A.patient_id = P.patient_id
+
+--Each admission costs $50 for patients without insurance, and $10 for patients with insurance. All patients with an even patient_id have insurance.
+--Give each patient a 'Yes' if they have insurance, and a 'No' if they don't have insurance. Add up the admission_total cost for each has_insurance group.
+
+select has_insurance,sum(admission_cost) as admission_total from
+(
+   select patient_id,
+   case when patient_id % 2 = 0 then 'Yes' else 'No' end as has_insurance,
+   case when patient_id % 2 = 0 then 10 else 50 end as admission_cost
+   from admissions
+)
+group by has_insurance
+
+--Show the provinces that has more patients identified as 'M' than 'F'. Must only show full province_name
+
+select pr.province_name from patients as pa
+  join province_names as pr on pa.province_id = pr.province_id
+group by pr.province_name having COUNT( CASE WHEN gender = 'M' THEN 1 END) > COUNT( CASE WHEN gender = 'F' THEN 1 END)
